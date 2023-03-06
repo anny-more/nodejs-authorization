@@ -1,63 +1,48 @@
-//import cookieSession from 'cookie-session';
-import express from 'express';
-//import session from 'express-session';
-//import passport from 'passport';
-//import {passport} from './auth/google';
-import {userDB} from './db.controller/users.id';
-import {uploadJpeg} from './db.controller/upload';
-import {upload} from './loader/multer';
-import {download} from './db.controller/dowload';
+import express, {Request, Response} from 'express';
+import session from 'express-session';
+import cookieParser from 'cookie-parser';
+import {passport} from './auth/passport.google';
+import cookieSession from 'cookie-session';
+import { errorHandler } from './common/errorHandler/errorHandler';
+import { authRouter } from './auth/router';
+import { uploadRouter } from './loader/uplodRouter';
+
+const bodyParser = require('body-parser');
 
 const app = express();
-
-//get id for unloged user
-app.get('/', userDB);
-
-//multer
-app.post('/upload', upload, uploadJpeg);
-
-//download files
-app.get('/download', download);
-
-app.listen(8080, () => console.log('listening on port: 8080'));
-
+app.use(express.json());
+app.use(
+  session({
+    secret: 'keyboard cat',
+    resave: false,
+    saveUninitialized: true,
+    cookie: {secure: true},
+  })
+);
+app.use(cookieParser());
+app.use(bodyParser.urlencoded({extended: true}));
+app.use(bodyParser.json());
 /*
-function isLoggedIn(req: Request, res: Response, next: Function) {
-  req.user ? next() : res.sendStatus(401);
-}
+app.use(
+  cookieSession({
+    name: 'google-auth-session',
+    keys: ['key1', 'key2'],
+  })
+);
+*/
+
+app.get('/', (req, res) => {
+  res.send(
+    '<a href=/auth>Authorization whith Google</a> <a href=/uload>Upload JPEG</a>'
+  );
+});
+
 app.use(session({secret: 'cats', resave: false, saveUninitialized: true}));
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.get(
-  '/auth/google',
-  passport.authenticate('google', {scope: ['email', 'profile']})
-);
+app.use(authRouter);
+app.use(uploadRouter);
 
-app.get('/auth/google/callback',
-  passport.authenticate('google', {
-    successRedirect: '/protected',
-    failureRedirect: '/auth/google/failure',
-  })
-);
-
-app.get('/protected', isLoggedIn, (req, res) => {
-  console.log(req.user);
-  res.send(`Hello ${req.user}`);
-});
-
-app.get('/logout', (req, res) => {
-  req.logout(err => {
-    console.log(err);
-  });
-  req.session.destroy(err => {
-    console.log(err);
-  });
-  console.log(req.body);
-  res.send('Goodbye!');
-});
-
-app.get('/auth/google/failure', (req, res) => {
-  res.send('Failed to authenticate..');
-});
-*/
+app.use(errorHandler);
+app.listen(8080, () => console.log('listening on port: 8080'));

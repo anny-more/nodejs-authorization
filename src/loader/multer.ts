@@ -1,9 +1,20 @@
 import {Request} from 'express';
 import multer, {FileFilterCallback} from 'multer';
+import { Profile } from 'passport';
+import { basename, extname } from 'path';
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    return cb(null, 'new-folder');
+    return cb(null, 'storage-multer');
+  },
+  filename: (req, file, cb) => {
+    return cb(
+      null,
+      basename(file.originalname, extname(file.originalname)) +
+        '.' +
+        Date.now() +
+        extname(file.originalname)
+    );
   },
 });
 
@@ -12,7 +23,13 @@ const fileFilter = (
   file: Express.Multer.File,
   cb: FileFilterCallback
 ) => {
-  if (file.mimetype === 'image/jpeg') {
+  if (req.user) {
+    cb(null, true);
+  }
+  if (
+    req.user === undefined &&
+    (file.mimetype === 'image/jpeg' || file.mimetype === 'image/jpg')
+  ) {
     cb(null, true);
   } else {
     cb(new Error('you can load only jpeg'));
@@ -25,4 +42,4 @@ const MulterConfig: multer.Options = {
   limits: {fileSize: 1048576 * 50},
 };
 
-export const upload = multer(MulterConfig).single('file');
+export const upload = multer(MulterConfig).array('file', 3);
